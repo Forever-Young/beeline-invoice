@@ -1,0 +1,7 @@
+{% extends "base.djhtml" %}
+
+{% block body %}
+{% for item in menu %}
+  <p><a href="/{{ item.url }}">{{ item.name }}</a></p>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,4 @@
+cron:
+- description: annonce new details
+  url: /announcenew
+  schedule: every 10 minutes

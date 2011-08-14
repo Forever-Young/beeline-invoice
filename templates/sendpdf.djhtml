@@ -1,0 +1,10 @@
+{% extends "base.djhtml" %}
+
+{% block body %}
+<p><a href="/">На главную</a></p>
+
+<form action="/pdfs/send/{{ key }}" method="POST">
+  <p>Email: <input name="email"></p>
+  <p><input type="submit" value="Отправить"></p>
+</form>
+{% endblock %}

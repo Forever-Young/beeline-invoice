@@ -1,0 +1,12 @@
+{% extends "base.djhtml" %}
+
+{% block body %}
+<p><a href="/">На главную</a></p>
+
+<form action="/settings/" method="POST">
+  <p>Название организации: <input value="{{ orgname }}" name="orgname"></p>
+  <p>Оповещать о новых детализациях (1 - да): <input value="{{ announce }}" name="announce"></p>
+  <p>Email адрес бота: <input value="{{ bot }}" name="bot"></p>
+  <p><input type="submit" value="Сохранить"></p>
+</form>
+{% endblock %}
