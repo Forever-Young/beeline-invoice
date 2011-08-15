@@ -195,12 +195,13 @@ class PDFsHandler(webapp.RequestHandler):
             }
         pdfs = PDF.all()
         if name:
-            pdfs = pdfs.search(name, properties=['name'])
+            names = Names.all().search(name)
+            pdfs = pdfs.filter("name =", name)
         if year:
             pdfs = pdfs.filter("year =", year)
         if month:
             pdfs = pdfs.filter("month =", month)
-        pdfs = pdfs.order("-month").order("-year").fetch(50)
+        pdfs = pdfs.order("-year").order("-month").fetch(50)
         for pdf in pdfs:
             params["pdfs"].append({
                 "name": pdf.name,
@@ -256,8 +257,7 @@ class AnnounceNewHandler(webapp.RequestHandler):
             text = []
             keys = []
             for pdf in pdfs:
-                label = u"%s %s" % (pdf.name, gen_date(pdf))
-                text.append("<a href='%s'>%s</a>" % (make_mailto_link(pdf), label))
+                text.append(make_mailto_link_pdf(pdf, u"%s %s" % (pdf.name, gen_date(pdf))))
                 keys.append(pdf.key())
             if keys:
                 deferred.defer(mark_as_announced, keys, _countdown=60)
@@ -265,7 +265,6 @@ class AnnounceNewHandler(webapp.RequestHandler):
                 for email in AnnounceNew.all().filter("enabled =", True):
                     logging.info(u"Отправляем список новых детализаций на адрес %s" % (email.email,))
                     send_text(email.email, u"Новые детализации", text)
-
 
 def main():
     application = webapp.WSGIApplication([

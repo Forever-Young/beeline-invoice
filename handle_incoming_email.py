@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging, re
+import datetime
 from google.appengine.ext import webapp, db
 from google.appengine.ext.webapp.mail_handlers import InboundMailHandler
 from google.appengine.ext.webapp.util import run_wsgi_app
-from google.appengine.api import mail
 
 import models
-from utils import send_pdf, gen_date, make_mailto_link, send_text
+from utils import send_pdf, gen_date, make_mailto_link, send_text, make_mailto_link_pdf
 from email.header import decode_header
 
 def admin_p(email):
@@ -16,23 +16,144 @@ def admin_p(email):
             return True
     return False
 
-def is_month(str):
-    if re.match("^\d{1,2}$", str):
-        return True
-    else:
-        return False
+def process_query(subj, sender):
+    # читаем параметры
+    # m.y, m-m.y, m.y-m.y, year, -month несколько раз
+    # email@domain.tld несколько раз
+    # все остальное - часть имени
+    names = []
+    send_to = []
+    dates = [] # список дат из запроса, для последующего уточнения
+    minus_month = 0
+    ranges = [] # список пар г,м
+    for item in subj.split(' '):
+        if re.match("^[^@]+@\S+$", item):
+            send_to.append(item)
+            continue
+        m = re.match("^(\d{1,2})[.](\d{4})$", item)
+        if m: # м.год
+            ranges.append((int(m.group(2)), (int(m.group(1)),)))
+            dates.append(item)
+            continue
+        m = re.match("^(\d{4})$", item)
+        if m: # год
+            ranges.append((int(m.group(1)), range(1, 13)))
+            dates.append(item)
+            continue
+        m = re.match("^-(\d{1,2})$", item)
+        if m: # -месяц
+            today = datetime.date.today()
+            month = today.month
+            year = today.year
+            for i in range(int(m.group(1))):
+                month -= 1
+                if month < 1:
+                    year -= 1
+                    month = 12
+                ranges.append((year, (month,)))
+            dates.append(item)
+            minus_month = (year, month)
+            continue
+        m = re.match("^(\d{1,2})[.](\d{4})-(\d{1,2})[.](\d{4})$", item)
+        if m: # м.год-м.год
+            for y in range(int(m.group(2)), int(m.group(4)) + 1):
+                if y == int(m.group(2)):
+                    cur_year = range(int(m.group(1)), 13)
+                elif y == int(m.group(4)):
+                    cur_year = range(1, int(m.group(3)) + 1)
+                else:
+                    cur_year = range(1, 13)
+                ranges.append((y, cur_year))
+            dates.append(item)
+            logging.info(ranges)
+            continue
+        m = re.match("^(\d{1,2})-(\d{1,2})[.](\d{4})$", item)
+        if m: # м-м.г
+            ranges.append((int(m.group(3)), range(int(m.group(1)), int(m.group(2)) + 1)))
+            dates.append(item)
+            continue
+        # else:
+        if item and item not in (u"Re:", u"Fwd:", u"Отв:"):
+            names.append(item)
 
-def is_year(str):
-    if re.match("^\d{4}$", str):
-        return True
+    # сначала ищем имя
+    names = models.Names.all().search(unicode(' '.join(names))).fetch(50)
+    if len(names) > 1:
+        # уточняющие запросы
+        text = []
+        for name in names:
+            link = " ".join([name.name] + dates + send_to)
+            text.append(make_mailto_link(link, name.name))
+        send_text(sender, u"Уточнение запроса %s" % (subj,), text)
+    elif not names:
+        logging.info(u"Ничего не найдено")
+        send_text(sender, u"Ответ на запрос %s" % (subj,), [u"Ничего не найдено"])
     else:
-        return False
+        name = names[0]
+        found = False
+        if not ranges:
+            # отправим последнюю и список других
+            today = datetime.date.today()
+            month = today.month
+            year = today.year
+            month -= 1
+            if month < 1:
+                year -= 1
+                month = 12
+            for pdf in models.PDF.all().filter("name =", name.name).filter("year =", year).filter("month =", month).fetch(10):
+                found = True
+                if send_to:
+                    logging.info(u"Отправляем ответ на запрос - сама детализация - на указанный адрес(а)")
+                    for s in send_to:
+                        send_pdf(pdf, "", s)
+                        send_text(sender, u"Ответ на запрос %s" % (subj,),
+                                  [u"Детализация №%s отправлена на адрес %s" % (pdf.num, send_to,)])
+                else:
+                    logging.info(u"Отправляем ответ на запрос - сама детализация")
+                    send_pdf(pdf, "", sender)
+            if not found:
+                logging.info(u"Ничего не найдено")
+                send_text(sender, u"Ответ на запрос %s" % (subj,), [u"Ничего не найдено"])
+            text = []
+            for pdf in models.PDF.all().filter("name =", name.name).filter("year =", year).filter("month <", month):
+                text.append(make_mailto_link_pdf(pdf, u"%s %s" % (pdf.name, gen_date(pdf)), send_to))
+            for pdf in models.PDF.all().filter("name =", name.name).filter("year <", year):
+                text.append(make_mailto_link_pdf(pdf, u"%s %s" % (pdf.name, gen_date(pdf)), send_to))
+            if text:
+                text.insert(0, u"Ссылки на остальные детализации")
+                logging.info(u"Отправляем ссылки на остальные детализации при -month")
+                send_text(sender, u"Ответ на запрос %s" % (subj,), text)
 
-def is_email(str):
-    if re.match("^[^@]+@\S+$", str):
-        return True
-    else:
-        return False
+        for r in ranges:
+            for m in r[1]:
+                pdfs = models.PDF.all()
+                pdfs = pdfs.filter("name =", name.name)
+                pdfs = pdfs.filter("year =", r[0])
+                pdfs = pdfs.filter("month =", m)
+                for pdf in pdfs.fetch(10):
+                    found = True
+                    if send_to:
+                        logging.info(u"Отправляем ответ на запрос - сама детализация - на указанный адрес(а)")
+                        for s in send_to:
+                            send_pdf(pdf, "", s)
+                            send_text(sender, u"Ответ на запрос %s" % (subj,),
+                                      [u"Детализация №%s отправлена на адрес %s" % (pdf.num, send_to,)])
+                    else:
+                        logging.info(u"Отправляем ответ на запрос - сама детализация")
+                        send_pdf(pdf, "", sender)
+        if not found:
+            logging.info(u"Ничего не найдено")
+            send_text(sender, u"Ответ на запрос %s" % (subj,), [u"Ничего не найдено"])
+        if minus_month:
+            text = []
+            for pdf in models.PDF.all().filter("name =", name.name).filter("year =", minus_month[0]).filter("month <", minus_month[1]):
+                text.append(make_mailto_link(pdf, send_to, u"%s %s" % (pdf.name, gen_date(pdf))))
+            for pdf in models.PDF.all().filter("name =", name.name).filter("year <", minus_month[0]):
+                text.append(make_mailto_link(pdf, send_to, u"%s %s" % (pdf.name, gen_date(pdf))))
+            if text:
+                text.insert(0, u"Ссылки на остальные детализации")
+                logging.info(u"Отправляем ссылки на остальные детализации при -month")
+                send_text(sender, u"Ответ на запрос %s" % (subj,), text)
 
 class LetterHandler(InboundMailHandler):
     def receive(self, msg):
@@ -88,46 +209,7 @@ class LetterHandler(InboundMailHandler):
                     else:
                         send_pdf(pdf, "", msg.sender)
             else:# вся тема как строка поиска
-                pdfs = models.PDF.all()
-                names = []
-                year = 0
-                month = 0
-                send_to = ""
-                for item in subj.split(' '):
-                    if is_month(item):
-                        month = int(item)
-                    elif is_year(item):
-                        year = int(item)
-                    elif is_email(item):
-                        send_to = item
-                    else:
-                        names.append(item)
-                pdfs = pdfs.search(unicode(' '.join(names)), properties=['name'])
-                if year:
-                    pdfs = pdfs.filter("year =", year)
-                if month:
-                    pdfs = pdfs.filter("month =", month)
-                text = []
-                pdfs = pdfs.order("-month").order("-year").fetch(50)
-
-                if len(pdfs) == 1:
-                    if send_to:
-                        logging.info(u"Отправляем ответ на запрос - сама детализация - на указанный адрес")
-                        send_pdf(pdfs[0], "", send_to)
-                        send_text(msg.sender, u"Ответ на запрос %s" % (subj,),
-                                  [u"Детализация отправлена на адрес %s" % (send_to,)])
-                    else:
-                        logging.info(u"Отправляем ответ на запрос - сама детализация")
-                        send_pdf(pdfs[0], "", msg.sender)
-                else:
-                    for pdf in pdfs:
-                        label = u"%s %s" % (pdf.name, gen_date(pdf))
-                        text.append("<a href='%s'>%s</a>" % (make_mailto_link(pdf, send_to), label))
-                    if not text:
-                        text.append(u"Ничего не найдено")
-                    logging.info(u"Отправляем ответ на запрос")
-                    send_text(msg.sender, u"Ответ на запрос %s" % (subj,), text)
-
+                process_query(subj, msg.sender)
 
 def main():
     application = webapp.WSGIApplication([LetterHandler.mapping()], debug=True)

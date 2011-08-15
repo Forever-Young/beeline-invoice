@@ -2,17 +2,13 @@
 
 from google.appengine.ext import db, search
 
-class PDF(search.SearchableModel):
+class PDF(db.Model):
     blob = db.BlobProperty()
     name = db.StringProperty()
     num = db.StringProperty()
     year = db.IntegerProperty()
     month = db.IntegerProperty()
     announced = db.BooleanProperty()
-
-    @classmethod
-    def SearchableProperties(cls):
-        return [['name']]
 
 class EmailAddresses(db.Model):
     name = db.StringProperty()
