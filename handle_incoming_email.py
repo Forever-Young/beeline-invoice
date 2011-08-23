@@ -157,7 +157,7 @@ def process_query(subj, sender):
 
 class LetterHandler(InboundMailHandler):
     def receive(self, msg):
-        if "Invoice from Beeline" in msg.subject:
+        if hasattr(msg, "subject") and "Invoice from Beeline" in msg.subject:
             logging.info(u"Пришло письмо от invoice@beeline.ru")
             body = msg.body.decode()
             m = re.search(u"Уважа[^ ]+[ ]+г[^ ]+[ ]+(.+?)[.]", body, flags=re.M)
@@ -187,11 +187,12 @@ class LetterHandler(InboundMailHandler):
                         send_pdf(rec, e.name, e.email)
         elif admin_p(msg.sender):
             subj = []
-            for item in decode_header(msg.subject):
-                if item[1]:
-                    subj.append(unicode(item[0], item[1]))
-                else:
-                    subj.append(item[0])
+            if hasattr(msg, "subject"):
+                for item in decode_header(msg.subject):
+                    if item[1]:
+                        subj.append(unicode(item[0], item[1]))
+                    else:
+                        subj.append(item[0])
             subj = ' '.join(subj)
             logging.info(u"Получен запрос: %s" % (subj,))
             m = re.match("^beeline get (\d+)( [^@]+@\S+)?$", subj)
@@ -208,7 +209,20 @@ class LetterHandler(InboundMailHandler):
                                   [u"Детализация отправлена на адрес %s" % (send_to,)])
                     else:
                         send_pdf(pdf, "", msg.sender)
-            else:# вся тема как строка поиска
+            elif not subj.replace(" ", ""):
+                send_text(msg.sender, u"Помощь",
+                          [
+                              u"Запрос пишется в теме письма",
+                              u"В любом порядке могут быть: часть имени, дата, email",
+                              u"Дата вида: месяц.год, месяц.год-месяц.год, месяц-месяц.год, год",
+                              u"Дат можно указывать несколько, email тоже",
+                              u"На указанные email отошлется сама детализация, на email спрашивающего - уведомление",
+                              u"Если при поиске по имени находятся несколько человек, посылается ответ с уточняющими ссылками",
+                              u"При указании даты в виде \"год\", пошлются детализации за весь год",
+                              u"Так же можно указать \"-число\", пошлются детализации за последние N месяцев",
+                              u"При указании только имени, пошлется последняя детализация и список ссылок на остальные",
+                          ])
+            else: # вся тема как строка поиска
                 process_query(subj, msg.sender)
 
 def main():

@@ -29,7 +29,7 @@ def send_text(to, subject, text):
     message.to = to
     message.subject = subject
     message.body = '\n'.join(text)
-    message.html = "<html><body>%s</body></html>" % ('<br>'.join(text),)
+    message.html = u"<html><body>%s</body></html>" % ('<br>'.join(text),)
     message.send()
 
 def make_mailto_link_pdf(pdf, label, send_to=[]):
@@ -44,3 +44,13 @@ def mark_as_announced(keys):
         pdf = db.get(key)
         pdf.announced = True
         pdf.put()
+
+def delete_pdfs(keys, start = 0):
+    logging.info(u"Удаляем детализации")
+    try:
+        for i, key in enumerate(keys[start:]):
+            pdf = db.get(key)
+            pdf.delete()
+            start = i
+    except DeadlineExceededError:
+        deferred.defer(delete_pdfs, keys, start)

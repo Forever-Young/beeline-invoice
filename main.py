@@ -3,7 +3,7 @@ from google.appengine.ext import deferred, webapp
 from google.appengine.ext.webapp import util, template
 
 from models import *
-from utils import send_pdf, make_mailto_link, send_text, gen_date, mark_as_announced
+from utils import send_pdf, make_mailto_link, send_text, gen_date, mark_as_announced, delete_pdfs
 from email.header import make_header
 
 import datetime, logging
@@ -13,6 +13,7 @@ menu = [ {"url": "emails", "name": u"Настройка адресов абон�
          {"url": "announce", "name": u"Список адресов для оповещения о новых детализациях"},
          {"url": "adminemails", "name": u"Список адресов, с которых можно запрашивать детализации"},
          {"url": "settings", "name": u"Настройки"},
+         {"url": "delete", "name": u"Удаление старых детализаций"},
          ]
 
 class MainHandler(webapp.RequestHandler):
@@ -193,23 +194,39 @@ class PDFsHandler(webapp.RequestHandler):
             "month": month,
             "pdfs": [],
             }
-        pdfs = PDF.all()
         if name:
-            names = Names.all().search(name)
-            pdfs = pdfs.filter("name =", name)
-        if year:
-            pdfs = pdfs.filter("year =", year)
-        if month:
-            pdfs = pdfs.filter("month =", month)
-        pdfs = pdfs.order("-year").order("-month").fetch(50)
-        for pdf in pdfs:
-            params["pdfs"].append({
-                "name": pdf.name,
-                "num": pdf.num,
-                "year": pdf.year,
-                "month": "%02d" % (pdf.month,),
-                "key": pdf.key(),
-                })
+            for name in Names.all().search(name).fetch(10):
+                pdfs = PDF.all()
+                pdfs = pdfs.filter("name =", name.name)
+                if year:
+                    pdfs = pdfs.filter("year =", year)
+                if month:
+                    pdfs = pdfs.filter("month =", month)
+                pdfs = pdfs.order("-year").order("-month").fetch(50)
+                for pdf in pdfs:
+                    params["pdfs"].append({
+                        "name": pdf.name,
+                        "num": pdf.num,
+                        "year": pdf.year,
+                        "month": "%02d" % (pdf.month,),
+                        "key": pdf.key(),
+                        })
+        else:
+            pdfs = PDF.all()
+            if year:
+                pdfs = pdfs.filter("year =", year)
+            if month:
+                pdfs = pdfs.filter("month =", month)
+            pdfs = pdfs.order("-year").order("-month").fetch(50)
+            for pdf in pdfs:
+                params["pdfs"].append({
+                    "name": pdf.name,
+                    "num": pdf.num,
+                    "year": pdf.year,
+                    "month": "%02d" % (pdf.month,),
+                    "key": pdf.key(),
+                    })
+
         self.response.out.write(template.render('templates/pdfs.djhtml', params))
 
 class PDFDownloadHandler(webapp.RequestHandler):
@@ -266,6 +283,32 @@ class AnnounceNewHandler(webapp.RequestHandler):
                     logging.info(u"Отправляем список новых детализаций на адрес %s" % (email.email,))
                     send_text(email.email, u"Новые детализации", text)
 
+class DeleteHandler(webapp.RequestHandler):
+    def get(self):
+        params = {
+            "year": "",
+            "month": "",
+            }
+        self.response.out.write(template.render('templates/delete.djhtml', params))
+
+    def post(self):
+        try:
+            year = int(self.request.str_POST.get("year"))
+        except ValueError:
+            year = 0
+        try:
+            month = int(self.request.str_POST.get("month"))
+        except ValueError:
+            month = 0
+        if year and month:
+            pdfs = PDF.all().filter("year =", year).filter("month =", month)
+        keys = []
+        for pdf in pdfs:
+            keys.append(pdf.key())
+        deferred.defer(delete_pdfs, keys)
+        self.redirect('/')
+
+
 def main():
     application = webapp.WSGIApplication([
         ('/', MainHandler),
@@ -277,6 +320,7 @@ def main():
         ('/pdfs/download/([^/]+)/?$', PDFDownloadHandler),
         ('/pdfs/send/([^/]+)/?$', PDFSendHandler),
         ('/settings/?$', SettingsHandler),
+        ('/delete/?$', DeleteHandler),
         ], debug=True)
     util.run_wsgi_app(application)
 
