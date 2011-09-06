@@ -3,7 +3,7 @@ from google.appengine.ext import deferred, webapp
 from google.appengine.ext.webapp import util, template
 
 from models import *
-from utils import send_pdf, make_mailto_link, send_text, gen_date, mark_as_announced, delete_pdfs
+from utils import send_pdf, make_mailto_link_pdf, make_mailto_link, send_text, gen_date, mark_as_announced, delete_pdfs
 from email.header import make_header
 
 import datetime, logging
