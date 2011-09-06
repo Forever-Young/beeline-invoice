@@ -240,7 +240,12 @@ class PDFDownloadHandler(webapp.RequestHandler):
 
 class PDFSendHandler(webapp.RequestHandler):
     def get(self, key):
+        pdf = db.get(key)
+        name = pdf.name
+        email = EmailAddresses.all().filter("name =", name).get()
         params = {"key": key}
+        if email:
+            params.update({"email": email.email})
         self.response.out.write(template.render('templates/sendpdf.djhtml', params))
 
     def post(self, key):
