@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
-from google.appengine.ext import deferred, webapp
-from google.appengine.ext.webapp import util, template
+
+import os
+import webapp2
+import jinja2
+import datetime
+import logging
+
+from google.appengine.ext import deferred
 
 from models import *
 from utils import send_pdf, make_mailto_link_pdf, make_mailto_link, send_text, gen_date, mark_as_announced, delete_pdfs
 from email.header import make_header
 
-import datetime, logging
 
 menu = [ {"url": "emails", "name": u"Настройка адресов абонентов"},
          {"url": "pdfs", "name": u"Просмотр детализаций"},
@@ -16,11 +21,12 @@ menu = [ {"url": "emails", "name": u"Настройка адресов абон�
          {"url": "delete", "name": u"Удаление старых детализаций"},
          ]
 
-class MainHandler(webapp.RequestHandler):
+class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write(template.render('templates/main.djhtml', {"menu": menu}))
+        template = jinja_environment.get_template('main.html')
+        self.response.out.write(template.render({"menu": menu}))
 
-class EmailsHandler(webapp.RequestHandler):
+class EmailsHandler(webapp2.RequestHandler):
     def get(self, key="", action=""):
         params = {}
         params["selected"] = 0
@@ -57,7 +63,8 @@ class EmailsHandler(webapp.RequestHandler):
                 params["emails"].append({"key": e.key(), "name": e.name,
                     "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/emails.djhtml', params))
+        template = jinja_environment.get_template('emails.html')
+        self.response.out.write(template.render(params))
 
     def post(self, key="", action=""):
         params = {}
@@ -76,10 +83,11 @@ class EmailsHandler(webapp.RequestHandler):
             params["emails"].append({"key": e.key(), "name": e.name,
                     "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/emails.djhtml', params))
+        template = jinja_environment.get_template('emails.html')
+        self.response.out.write(template.render(params))
 
 
-class AnnounceEmailsHandler(webapp.RequestHandler):
+class AnnounceEmailsHandler(webapp2.RequestHandler):
     def get(self, key="", action=""):
         params = {}
         params["add"] = 0
@@ -106,7 +114,8 @@ class AnnounceEmailsHandler(webapp.RequestHandler):
                 params["emails"].append({"key": e.key(),
                     "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/announce.djhtml', params))
+        template = jinja_environment.get_template('announce.html')
+        self.response.out.write(template.render(params))
 
     def post(self, key="", action=""):
         params = {}
@@ -120,10 +129,11 @@ class AnnounceEmailsHandler(webapp.RequestHandler):
         for e in emails:
             params["emails"].append({"key": e.key(), "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/announce.djhtml', params))
+        template = jinja_environment.get_template('announce.html')
+        self.response.out.write(template.render(params))
 
 
-class AdminEmailsHandler(webapp.RequestHandler):
+class AdminEmailsHandler(webapp2.RequestHandler):
     def get(self, key="", action=""):
         params = {}
         params["add"] = 0
@@ -149,7 +159,8 @@ class AdminEmailsHandler(webapp.RequestHandler):
             for e in emails:
                 params["emails"].append({"key": e.key(), "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/adminemails.djhtml', params))
+        template = jinja_environment.get_template('adminemails.html')
+        self.response.out.write(template.render(params))
 
     def post(self, key="", action=""):
         params = {}
@@ -163,10 +174,11 @@ class AdminEmailsHandler(webapp.RequestHandler):
         for e in emails:
             params["emails"].append({"key": e.key(), "email": e.email, "enable_disable":
                     u"Выключить" if e.enabled else u"Включить"})
-        self.response.out.write(template.render('templates/adminemails.djhtml', params))
+        template = jinja_environment.get_template('adminemails.html')
+        self.response.out.write(template.render(params))
 
 
-class PDFsHandler(webapp.RequestHandler):
+class PDFsHandler(webapp2.RequestHandler):
     def get(self):
         today = datetime.date.today() - datetime.timedelta(days=31)
         params = {
@@ -175,7 +187,8 @@ class PDFsHandler(webapp.RequestHandler):
             "year": today.year,
             "month": today.month,
             }
-        self.response.out.write(template.render('templates/pdfs.djhtml', params))
+        template = jinja_environment.get_template('pdfs.html')
+        self.response.out.write(template.render(params))
 
     def post(self):
         name = unicode(self.request.str_POST.get("name"), "utf-8")
@@ -227,9 +240,11 @@ class PDFsHandler(webapp.RequestHandler):
                     "key": pdf.key(),
                     })
 
-        self.response.out.write(template.render('templates/pdfs.djhtml', params))
+        template = jinja_environment.get_template('pdfs.html')
+        self.response.out.write(template.render(params))
 
-class PDFDownloadHandler(webapp.RequestHandler):
+
+class PDFDownloadHandler(webapp2.RequestHandler):
     def get(self, key):
         pdf = db.get(key)
         fname = u"Beeline %s %s.pdf" % (pdf.name, gen_date(pdf),)
@@ -238,7 +253,7 @@ class PDFDownloadHandler(webapp.RequestHandler):
         self.response.headers["Content-Disposition"] = "filename=\"%s\"" % (fname,)
         self.response.out.write(pdf.blob)
 
-class PDFSendHandler(webapp.RequestHandler):
+class PDFSendHandler(webapp2.RequestHandler):
     def get(self, key):
         pdf = db.get(key)
         name = pdf.name
@@ -246,20 +261,22 @@ class PDFSendHandler(webapp.RequestHandler):
         params = {"key": key}
         if email:
             params.update({"email": email.email})
-        self.response.out.write(template.render('templates/sendpdf.djhtml', params))
+        template = jinja_environment.get_template('sendpdf.html')
+        self.response.out.write(template.render(params))
 
     def post(self, key):
         send_pdf(db.get(key), "", self.request.str_POST.get("email"))
         self.redirect('/pdfs/')
 
-class SettingsHandler(webapp.RequestHandler):
+class SettingsHandler(webapp2.RequestHandler):
     def get(self):
         settings = Settings.all().get()
         if not settings:
             settings = Settings(orgname="", announce="", bot="")
             settings.put()
         params = {"orgname": settings.orgname, "announce": settings.announce, "bot": settings.bot}
-        self.response.out.write(template.render('templates/settings.djhtml', params))
+        template = jinja_environment.get_template('settings.html')
+        self.response.out.write(template.render(params))
 
     def post(self):
         settings = Settings.all().get()
@@ -272,7 +289,8 @@ class SettingsHandler(webapp.RequestHandler):
         settings.put()
         self.redirect('/settings/')
 
-class AnnounceNewHandler(webapp.RequestHandler):
+
+class AnnounceNewHandler(webapp2.RequestHandler):
     def get(self):
         if Settings.all().get().announce == "1":
             pdfs = PDF.all().filter("announced = ", False).fetch(200)
@@ -288,13 +306,15 @@ class AnnounceNewHandler(webapp.RequestHandler):
                     logging.info(u"Отправляем список новых детализаций на адрес %s" % (email.email,))
                     send_text(email.email, u"Новые детализации", text)
 
-class DeleteHandler(webapp.RequestHandler):
+
+class DeleteHandler(webapp2.RequestHandler):
     def get(self):
         params = {
             "year": "",
             "month": "",
             }
-        self.response.out.write(template.render('templates/delete.djhtml', params))
+        template = jinja_environment.get_template('delete.html')
+        self.response.out.write(template.render(params))
 
     def post(self):
         try:
@@ -314,8 +334,10 @@ class DeleteHandler(webapp.RequestHandler):
         self.redirect('/')
 
 
-def main():
-    application = webapp.WSGIApplication([
+jinja_environment = jinja2.Environment(autoescape=True,
+    loader=jinja2.FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates')))
+
+app = webapp2.WSGIApplication([
         ('/', MainHandler),
         ('/emails/?([^/]+)?/?(delete|toggle)?/?$', EmailsHandler),
         ('/announcenew/?$', AnnounceNewHandler),
@@ -327,7 +349,3 @@ def main():
         ('/settings/?$', SettingsHandler),
         ('/delete/?$', DeleteHandler),
         ], debug=True)
-    util.run_wsgi_app(application)
-
-if __name__ == '__main__':
-    main()
