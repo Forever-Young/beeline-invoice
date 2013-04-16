@@ -160,7 +160,7 @@ class LetterHandler(InboundMailHandler):
         if hasattr(msg, "subject") and "Invoice from Beeline" in msg.subject:
             logging.info(u"Пришло письмо от invoice@beeline.ru")
             body = msg.body.decode()
-            m = re.search(u"Уважа[^ ]+[ ]+г[^ ]+[ ]+(.+?)[.]", body, flags=re.M)
+            m = re.search(u"Уважа[^ ]+[ ]+(.+?)[.]", body, flags=re.M)
             if m:
                 abonent = unicode(m.group(1))
             else:
@@ -186,14 +186,9 @@ class LetterHandler(InboundMailHandler):
                     for e in models.EmailAddresses.all().filter("enabled =", True).filter("name =", abonent):
                         send_pdf(rec, e.name, e.email)
         elif admin_p(msg.sender):
-            subj = []
+            subj = ""
             if hasattr(msg, "subject"):
-                for item in decode_header(msg.subject):
-                    if item[1]:
-                        subj.append(unicode(item[0], item[1]))
-                    else:
-                        subj.append(item[0])
-            subj = ' '.join(subj)
+                subj = msg.subject
             logging.info(u"Получен запрос: %s" % (subj,))
             m = re.match("^beeline get (\d+)( [^@]+@\S+)?$", subj)
             if m:
