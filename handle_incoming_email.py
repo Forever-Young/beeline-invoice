@@ -157,7 +157,8 @@ def process_query(subj, sender):
 
 class LetterHandler(InboundMailHandler):
     def receive(self, msg):
-        if hasattr(msg, "subject") and "Invoice from Beeline" in msg.subject:
+        if (hasattr(msg, "sender") and "invoice@beeline.ru" in msg.sender) or\
+                (hasattr(msg, "subject") and u"Счет за услуги связи Билайн" in msg.subject):
             logging.info(u"Пришло письмо от invoice@beeline.ru")
             body = msg.body.decode()
             m = re.search(u"Уважа[^ ]+[ ]+(.+?)[.]", body, flags=re.M)

@@ -3,6 +3,7 @@ from google.appengine.api import mail
 from google.appengine.ext import db
 import logging
 from models import Settings, PDF
+from google.appengine.runtime import DeadlineExceededError
 
 rus_months = [u"Январь", u"Февраль", u"Март", u"Апрель", u"Май",
               u"Июнь", u"Июль", u"Август", u"Сентябрь", u"Октябрь", u"Ноябрь", u"Декабрь"]
@@ -50,7 +51,8 @@ def delete_pdfs(keys, start = 0):
     try:
         for i, key in enumerate(keys[start:]):
             pdf = db.get(key)
-            pdf.delete()
+            if pdf:
+                pdf.delete()
             start = i
     except DeadlineExceededError:
         deferred.defer(delete_pdfs, keys, start)

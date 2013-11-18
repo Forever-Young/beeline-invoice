@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 
-{% block body %}
-<p><a href="/">На главную</a></p>
-{% if add %}
-<p><a href="/announce">Назад</a></p>
+{% block contents %}
+  <p><a href="/">На главную</a></p>
+  {% if add %}
+    <p><a href="/announce">Назад</a></p>
 
-<form action="/announce/add" method="POST">
-  <p>Email: <input name="email"></p>
-  <p><input type="submit" value="Добавить"></p>
-</form>
-{% else %}
+    <form action="/announce/add" method="POST">
+      <p>Email: <input name="email"></p>
+      <p><input type="submit" value="Добавить"></p>
+    </form>
+  {% else %}
 
-<table>
-  <tr>
-    <th>Email</th>
-    <th></th>
-    <th></th>
-  </tr>
-  {% for e in emails %}
-  <tr>
-    <td>{{ e.email }}</td>
-    <td><a href="/announce/{{ e.key }}/delete/">Удалить</a></td>
-    <td><a href="/announce/{{ e.key }}/toggle/">{{ e.enable_disable }}</a></td>
-  </tr>
-  {% endfor %}
-</table>
-<a href="/announce/add">Добавить</a>
-{% endif %}
+    <table>
+      <tr>
+        <th>Email</th>
+        <th></th>
+        <th></th>
+      </tr>
+      {% for e in emails %}
+        <tr>
+          <td>{{ e.email }}</td>
+          <td><a href="/announce/{{ e.key }}/delete/">Удалить</a></td>
+          <td><a href="/announce/{{ e.key }}/toggle/">{{ e.enable_disable }}</a></td>
+        </tr>
+      {% endfor %}
+    </table>
+    <a href="/announce/add">Добавить</a>
+  {% endif %}
 {% endblock %}

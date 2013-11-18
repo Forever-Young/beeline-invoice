@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block body %}
-{% for item in menu %}
-  <p><a href="/{{ item.url }}">{{ item.name }}</a></p>
-{% endfor %}
+{% block contents %}
+  {% for item in menu %}
+    <p><a href="/{{ item.url }}">{{ item.name }}</a></p>
+  {% endfor %}
 {% endblock %}

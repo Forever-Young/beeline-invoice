@@ -1,8 +1,63 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-<link rel="stylesheet" type="text/css" href="/css/main.css"/>
-</head><body>
-{% block body %}
-{% endblock %}
-</body></html>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Детализации Beeline</title>
+    <link rel="stylesheet" media="screen" href="/css/bootstrap.css"/>
+    <link rel="stylesheet" media="screen" href="/css/bootstrap-switch.css"/>
+    <link href="/img/favicon.ico" rel="icon" type="image/x-icon" />
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+    </style>
+  </head>
+  <body>
+    {% block header %}
+      <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+          <div class="container">
+            <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <div class="nav-collapse collapse">
+              <ul class="nav">
+                {% set active_page = active_page|default('index') -%}
+
+                <li{% if active_page == 'index' %} class="active"{% endif %}><a href="/"><!-- link_to !!!-->Поиск</a></li>
+                <form class="navbar-search pull-left">
+                  <input type="text" class="search-query" placeholder="Быстрый поиск по фамилии"/>
+                </form>
+                <li{% if active_page == 'emails' %} class="active"{% endif %}><a href="/emails">E-mail адреса абонентов</a></li>
+                <li class="dropdown pull-right{% if active_page == 'settings' %} active{% endif %}">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                    Администрирование
+                    <b class="caret"></b>
+                  </a>
+                  <ul class="dropdown-menu">
+                    <li>
+                      <a href="/settings">Общие настройки</a>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div><!--/.nav-collapse -->
+          </div>
+        </div>
+      </div>
+    {% endblock %}
+
+    <div class="container">
+      {% block contents %}
+      {% endblock %}
+    </div>
+
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-switch.min.js"></script>
+    <script>
+      $('.dropdown-toggle').dropdown();
+    </script>
+  </body>
+</html>

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block body %}
-<p><a href="/">На главную</a></p>
+{% block contents %}
+  <p><a href="/">На главную</a></p>
 
-<form action="/delete/" method="POST">
-  <p>Год: <input value="{{ year }}" name="year"></p>
-  <p>Месяц: <input value="{{ month }}" name="month"></p>
-  <p><input type="submit" value="Удалить"></p>
-</form>
+  <form action="/delete/" method="POST">
+    <p>Год: <input value="{{ year }}" name="year"></p>
+    <p>Месяц: <input value="{{ month }}" name="month"></p>
+    <p><input type="submit" value="Удалить"></p>
+  </form>
 {% endblock %}

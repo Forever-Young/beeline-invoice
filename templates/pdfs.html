@@ -1,32 +1,32 @@
 {% extends "base.html" %}
 
-{% block body %}
-<p><a href="/">На главную</a></p>
+{% block contents %}
+  <p><a href="/">На главную</a></p>
 
-<form action="/pdfs/" method="POST">
-  <p>ФИО: <input value="{{ name }}" name="name"></p>
-  <p>Год: <input value="{{ year }}" name="year"></p>
-  <p>Месяц: <input value="{{ month }}" name="month"></p>
-  <p><input type="submit" value="Поиск"></p>
-</form>
-{% if search %}
-<table>
-  <tr>
-    <th>ФИО</th>
-    <th>Номер счета</th>
-    <th>Дата</th>
-    <th></th>
-    <th></th>
-  </tr>
-  {% for p in pdfs %}
-  <tr>
-    <td>{{ p.name }}</td>
-    <td>{{ p.num }}</td>
-    <td>{{ p.year }}-{{ p.month }}</td>
-    <td><a href="/pdfs/download/{{ p.key }}">Скачать</a></td>
-    <td><a href="/pdfs/send/{{ p.key }}">Отправить</a></td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
+  <form action="/pdfs/" method="POST">
+    <p>ФИО: <input value="{{ name }}" name="name"></p>
+    <p>Год: <input value="{{ year }}" name="year"></p>
+    <p>Месяц: <input value="{{ month }}" name="month"></p>
+    <p><input type="submit" value="Поиск"></p>
+  </form>
+  {% if search %}
+    <table>
+      <tr>
+        <th>ФИО</th>
+        <th>Номер счета</th>
+        <th>Дата</th>
+        <th></th>
+        <th></th>
+      </tr>
+      {% for p in pdfs %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.num }}</td>
+          <td>{{ p.year }}-{{ p.month }}</td>
+          <td><a href="/pdfs/download/{{ p.key }}">Скачать</a></td>
+          <td><a href="/pdfs/send/{{ p.key }}">Отправить</a></td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
 {% endblock %}

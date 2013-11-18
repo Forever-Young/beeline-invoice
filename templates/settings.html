@@ -1,12 +1,34 @@
 {% extends "base.html" %}
 
-{% block body %}
-<p><a href="/">На главную</a></p>
+{% set active_page = 'settings' %}
 
-<form action="/settings/" method="POST">
-  <p>Название организации: <input value="{{ orgname }}" name="orgname"></p>
-  <p>Оповещать о новых детализациях (1 - да): <input value="{{ announce }}" name="announce"></p>
-  <p>Email адрес бота: <input value="{{ bot }}" name="bot"></p>
-  <p><input type="submit" value="Сохранить"></p>
-</form>
+{% block menu %}
+  {% set active_page = "settings" %}
+  {% include "include_menu.html" %}
+{% endblock %}
+
+{% block contents %}
+  <form action="/settings/" method="POST" class="form-horizontal">
+    <div class="control-group">
+      <label class="control-label" for="orgname">Название организации:</label>
+      <div class="controls">
+        <input value="{{ orgname }}" name="orgname" id="orgname">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="announce">Оповещать о новых детализациях:</label>
+      <div class="controls">
+        <div class="make-switch">
+          <input type="checkbox" name="announce" id="announce" {% if announce %}checked{% endif %}>
+        </div>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label" for="bot">Email адрес бота:</label>
+      <div class="controls">
+        <input value="{{ bot }}" name="bot" id="bot">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+  </form>
 {% endblock %}

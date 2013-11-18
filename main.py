@@ -13,11 +13,9 @@ from utils import send_pdf, make_mailto_link_pdf, make_mailto_link, send_text, g
 from email.header import make_header
 
 
-menu = [ {"url": "emails", "name": u"Настройка адресов абонентов"},
-         {"url": "pdfs", "name": u"Просмотр детализаций"},
+menu = [ {"url": "pdfs", "name": u"Просмотр детализаций"},
          {"url": "announce", "name": u"Список адресов для оповещения о новых детализациях"},
          {"url": "adminemails", "name": u"Список адресов, с которых можно запрашивать детализации"},
-         {"url": "settings", "name": u"Настройки"},
          {"url": "delete", "name": u"Удаление старых детализаций"},
          ]
 
@@ -272,22 +270,22 @@ class SettingsHandler(webapp2.RequestHandler):
     def get(self):
         settings = Settings.all().get()
         if not settings:
-            settings = Settings(orgname="", announce="", bot="")
+            settings = Settings(orgname="", announce="0", bot="")
             settings.put()
-        params = {"orgname": settings.orgname, "announce": settings.announce, "bot": settings.bot}
+        params = {"orgname": settings.orgname, "announce": bool(int(settings.announce)), "bot": settings.bot}
         template = jinja_environment.get_template('settings.html')
         self.response.out.write(template.render(params))
 
     def post(self):
         settings = Settings.all().get()
         settings.orgname = unicode(self.request.str_POST.get("orgname"), "utf-8")
-        try:
-            settings.announce = self.request.str_POST.get("announce")
-        except UnicodeDecodeError:
-            settings.announce = "0"
+        settings.announce = '1' if self.request.str_POST.get("announce") == 'on' else '0'
         settings.bot = unicode(self.request.str_POST.get("bot"), "utf-8")
         settings.put()
-        self.redirect('/settings/')
+
+        params = {"orgname": settings.orgname, "announce": bool(int(settings.announce)), "bot": settings.bot}
+        template = jinja_environment.get_template('settings.html')
+        self.response.out.write(template.render(params))
 
 
 class AnnounceNewHandler(webapp2.RequestHandler):
