@@ -160,8 +160,10 @@ class LetterHandler(InboundMailHandler):
         if (hasattr(msg, "sender") and "invoice" in msg.sender) or\
                 (hasattr(msg, "subject") and u"Счет за услуги связи Билайн" in msg.subject):
             logging.info(u"Пришло письмо от invoice@beeline.ru")
-            body = msg.body.decode()
-            m = re.search(u"Уважа[^ ]+[ ]+(.+?)[.]", body, flags=re.M)
+            body = list(msg.bodies())[0][1]
+            body = body.decode()
+            body = body.replace('&nbsp;', ' ')
+            m = re.search(u"Уважа[^,]+,[ ]+(.+?)[!]", body, flags=re.M)
             if m:
                 abonent = unicode(m.group(1))
             else:
@@ -173,6 +175,7 @@ class LetterHandler(InboundMailHandler):
             if abonent:
                 logging.info(u"Абонент - %s" % (abonent,))
                 pdf_fname, pdf = list(msg.attachments[0])
+                pdf.charset = ''
                 pdf = pdf.decode()
                 m = re.match("^bf[.]([^.]+)[.](\d+)[.]output[.][pP]df$", pdf_fname)
                 num, date = m.groups()
