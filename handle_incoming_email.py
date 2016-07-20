@@ -157,7 +157,7 @@ def process_query(subj, sender):
 
 class LetterHandler(InboundMailHandler):
     def receive(self, msg):
-        if (hasattr(msg, "sender") and "invoice@beeline.ru" in msg.sender) or\
+        if (hasattr(msg, "sender") and "invoice" in msg.sender) or\
                 (hasattr(msg, "subject") and u"Счет за услуги связи Билайн" in msg.subject):
             logging.info(u"Пришло письмо от invoice@beeline.ru")
             body = msg.body.decode()
@@ -174,7 +174,7 @@ class LetterHandler(InboundMailHandler):
                 logging.info(u"Абонент - %s" % (abonent,))
                 pdf_fname, pdf = list(msg.attachments[0])
                 pdf = pdf.decode()
-                m = re.match("^(\d+)_(\d+).[pP]df$", pdf_fname)
+                m = re.match("^bf[.]([^.]+)[.](\d+)[.]output[.][pP]df$", pdf_fname)
                 num, date = m.groups()
                 m = re.match("^(\d\d\d\d)(\d\d)(\d\d)$", date)
                 year, month = [int(x) for x in m.groups()[:2]]
